@@ -1,0 +1,3 @@
+[submodule "master/lib/SOEM"]
+	path = master/lib/SOEM
+	url = https://github.com/OpenEtherCATsociety/SOEM
