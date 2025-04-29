@@ -1,12 +1,14 @@
-# soem-test
+# EthercatWithArcs
 
-## clone & build
+## setup
 
 ```sh
 git clone https://github.com/MotionControlLab/EthercatWithArcs.git --recursive
+cd ./EthercatWithArcs/master
 ```
 
+## build & run
+
 ```sh
-cd master
 sudo ./run.sh
 ```
