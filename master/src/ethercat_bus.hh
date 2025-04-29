@@ -34,5 +34,5 @@ public:
 
     void close();
 
-    void update();
+    bool update();
 };

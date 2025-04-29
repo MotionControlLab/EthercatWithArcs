@@ -49,7 +49,7 @@ public:
         }
 
         // データを取得
-        return deserialize<T>({ soem_svale.inputs, sizeof(T) });
+        return deserialize<T>(soem_svale.inputs, sizeof(T));
     }
 
 };
