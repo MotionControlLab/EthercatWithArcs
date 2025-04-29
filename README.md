@@ -3,7 +3,7 @@
 ## clone & build
 
 ```sh
-git clone <URL> --recursive
+git clone https://github.com/MotionControlLab/EthercatWithArcs.git --recursive
 ```
 
 ```sh
