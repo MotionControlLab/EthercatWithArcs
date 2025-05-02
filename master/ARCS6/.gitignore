@@ -1,0 +1,49 @@
+# gitでの共有を無視するファイル・ディレクトリ
+# Yokokura, Yuki 2024/10/15
+
+# C++上での基本的に不必要なファイル
+# Prerequisites
+*.d
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+#*.lib ←コレは必要
+
+# Executables
+*.exe
+*.out
+*.app
+
+# ARCS6上での基本的に不必要なファイル
+DATA.csv
+EventLog.txt
+
+# 公開リポジトリで共有するrobot配下のディレクトリ
+# 下記で列挙されているロボット以外は非公開
+/robot/*
+!/robot/general/
+!/robot/sample/
+!/robot/ServoEducator/
+!/robot/ZFA01/
+!/robot/Soem/
+
+# CMkae関連のディレクトリ
+.idea/
+**/cmake-build-*/

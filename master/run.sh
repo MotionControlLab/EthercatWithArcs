@@ -1,3 +1,5 @@
+cd ./ARCS6/robot/Soem/BaseCtrl
+
 if [ ! -d build ]; then
     mkdir build
 fi
@@ -15,4 +17,4 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-sudo ./src/test eth0
+sudo ./ARCS
