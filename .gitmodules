@@ -1,0 +1,3 @@
+[submodule "master/ARCS6/robot/Soem/BaseCtrl/lib/SOEM"]
+	path = master/ARCS6/robot/Soem/BaseCtrl/lib/SOEM
+	url = https://github.com/OpenEtherCATsociety/SOEM.git
