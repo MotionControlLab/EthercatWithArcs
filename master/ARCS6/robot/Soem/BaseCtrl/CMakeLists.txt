@@ -41,7 +41,7 @@ add_executable(
         ${ARCS_EQUIP_files}
         ConstParams.hh
         ControlFunctions.cc
-        ethercat_bus.cc
+        EthercatBus.cc
 )
 
 # ARCSに必要ライブラリをリンク
@@ -67,7 +67,7 @@ add_executable(
         OfflineFunction.cc # ARCS.ccの代わりにオフライン
         ConstParams.hh
         ControlFunctions.cc
-        ethercat_bus.cc
+        EthercatBus.cc
 )
 
 # ARCSに必要ライブラリをリンク

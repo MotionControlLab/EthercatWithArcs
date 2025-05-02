@@ -21,8 +21,8 @@
 #include "InterfaceFunctions.hh"
 
 // SOEMラッパー
-#include "ethercat_bus.hh"
-#include "ethercat_slave.hh"
+#include "EthercatBus.hh"
+#include "EthercatSlave.hh"
 
 // 追加のARCSライブラリをここに記述
 #include "ArcsMatrix.hh"
@@ -34,14 +34,15 @@ namespace {
 	// スレッド間で共有したい変数をここに記述
 	ArcsMat<EquipParams::ACTUATOR_NUM, 1> thm;	//!< [rad]  位置ベクトル
 	ArcsMat<EquipParams::ACTUATOR_NUM, 1> iqref;//!< [A,Nm] 電流指令,トルク指令ベクトル
-	ethercat_bus bus;
 	
-    ethercat_slave_reader<int> volume_slave{ 
-        slave_index{ 1 },
+	EthercatBus Bus;
+	
+    EthercatSlaveReceiver<int> VolumeSlave{ 
+        SlaveIndex{ 1 },
     };
 
-    ethercat_slave_sender<int> servo_slave{ 
-        slave_index{ 2 },
+    EthercatSlaveSender<int> ServoSlave{ 
+        SlaveIndex{ 2 },
     };
 }
 
@@ -63,34 +64,36 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
 		Interface.ServoON();		// サーボON指令の送出
 		Initializing = false;		// 初期化中ランプ消灯		
     
-		switch (bus.init("eth0"))
+		switch (Bus.Init("enp0s20f0u4"))
 		{
-		case ethercat_bus::init_state::ALL_SLAVES_OP_STATE:
-			std::cout << "[o] All slaves are in OP state." << std::endl;
+		case EthercatBus::InitState::ALL_SLAVES_OP_STATE:
+			// std::cout << "[o] All slaves are in OP state." << std::endl;
 			break;
-		case ethercat_bus::init_state::PORT_OPEN_FAILED:
+		case EthercatBus::InitState::PORT_OPEN_FAILED:
 			std::cout << "[x] Port open failed." << std::endl;
 			return 1;
-		case ethercat_bus::init_state::SLAVES_FOUND:
+		case EthercatBus::InitState::SLAVES_NOT_FOUND:
 			std::cout << "[x] Slaves found but not all are in OP state." << std::endl;
 			return 2;
-		case ethercat_bus::init_state::NOT_ALL_OP_STATE:
+		case EthercatBus::InitState::NOT_ALL_OP_STATE:
 			std::cout << "[x] Not all slaves are in OP state." << std::endl;
 			return 3;
 		}
 	}
 	if(CmdFlag == CTRL_LOOP){
 		
-        bus.update();
+        Bus.Update();
 
-        if (const std::optional<int> volume = volume_slave.get_data())
+		const std::optional<int> Volume = VolumeSlave.GetData();
+
+        if (Volume)
         {
-            servo_slave.set_data(*volume / 1024. * 180);
-            std::cout << "[o] Volume data: " << *volume << std::endl;
+            ServoSlave.SetData(*Volume / 1024. * 180);
+            // std::cout << "[o] Volume data: " << *Volume << std::endl;
         }
         else
         {
-            std::cout << "[x] Failed to get volume data." << std::endl;
+            std::cout << "[x] Failed to get Volume data." << std::endl;
         }
 
 		// 周期モード (ここは制御周期 SAMPLING_TIME[0] 毎に呼び出される(リアルタイム空間なので処理は制御周期内に収めること))
@@ -98,15 +101,24 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
 		Interface.GetPosition(thm);		// [rad] 位置ベクトルの取得
 		Screen.GetOnlineSetVar();		// オンライン設定変数の読み込み
 		
+
 		// ここに制御アルゴリズムを記述する
 		
 		Interface.SetCurrent(iqref);	// [A] 電流指令ベクトルの出力
 		Screen.SetVarIndicator(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);	// 任意変数インジケータ(変数0, ..., 変数9)
 		Graph.SetTime(Tact, t);									// [s] グラフ描画用の周期と時刻のセット
-		Graph.SetVars(0, 0, 0, 0, 0, 0, 0, 0, 0);	// グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
+
+		if (Volume)
+		{
+			Graph.SetVars(0, *Volume / 1024. - 0.5, 0, 0, 0, 0, 0, 0, 0);	// グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
+		}
+		else
+		{
+			Graph.SetVars(0, 0, 0, 0, 0, 0, 0, 0, 0);	// グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
+		}
+		
 		Graph.SetVars(1, 0, 0, 0, 0, 0, 0, 0, 0);	// グラフプロット1 (グラフ番号, 変数0, ..., 変数7)
 		Graph.SetVars(2, 0, 0, 0, 0, 0, 0, 0, 0);	// グラフプロット2 (グラフ番号, 変数0, ..., 変数7)
-		Graph.SetVars(3, 0, 0, 0, 0, 0, 0, 0, 0);	// グラフプロット3 (グラフ番号, 変数0, ..., 変数7)
 		UsrGraph.SetVars(0, 0);						// ユーザカスタムプロット（例）
 		Memory.SetData(Tact, t, 0, 0, 0, 0, 0, 0, 0, 0, 0);		// CSVデータ保存変数 (周期, A列, B列, ..., J列)
 		// リアルタイム制御ここまで
