@@ -36,7 +36,7 @@ class ConstParams {
 		//! @brief 制御周期の設定
 		static constexpr std::array<unsigned long, ARCSparams::THREAD_MAX> SAMPLING_TIME = {
 		//   s  m  u  n	制御周期は Ts[0] ≦ Ts[1] ≦ … ≦ Ts[THREAD_MAX] になるようにすること
-				 500000,	// [ns] 制御用周期実行関数1 (スレッド1) 制御周期
+				1000000,	// [ns] 制御用周期実行関数1 (スレッド1) 制御周期
 				1000000,	// [ns] 制御用周期実行関数2 (スレッド2) 制御周期
 				2000000,	// [ns] 制御用周期実行関数3 (スレッド3) 制御周期
 		};
@@ -84,7 +84,7 @@ class ConstParams {
 		//! @brief 縦軸ラベル
 		static constexpr std::array<char[31], ARCSparams::PLOT_MAX> PLOT_FLABEL = {
 			"---------- [-]",	// グラフプロット0
-			"---------- [-]",	// グラフプロット1
+			"Tcmp------ [ms]",	// グラフプロット1
 			"---------- [-]",	// グラフプロット2
 			"---------- [-]",	// グラフプロット3
 			"---------- [-]",	// グラフプロット4

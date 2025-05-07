@@ -34,16 +34,6 @@ namespace {
 	// スレッド間で共有したい変数をここに記述
 	ArcsMat<EquipParams::ACTUATOR_NUM, 1> thm;	//!< [rad]  位置ベクトル
 	ArcsMat<EquipParams::ACTUATOR_NUM, 1> iqref;//!< [A,Nm] 電流指令,トルク指令ベクトル
-	
-	EthercatBus Bus;
-	
-    EthercatSlaveReceiver<int> VolumeSlave{ 
-        SlaveIndex{ 1 },
-    };
-
-    EthercatSlaveSender<int> ServoSlave{ 
-        SlaveIndex{ 2 },
-    };
 }
 
 //! @brief 制御用周期実行関数1
@@ -56,6 +46,15 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
 	[[maybe_unused]] constexpr double Ts = ConstParams::SAMPLING_TIME[0]*1e-9;	// [s]	制御周期
 	
 	// 制御用変数宣言
+	static EthercatBus Bus;
+	
+    static EthercatSlaveReceiver<int> VolumeSlave{ 
+        SlaveIndex{ 1 },
+    };
+
+    static EthercatSlaveSender<int> MotorSlave{ 
+        SlaveIndex{ 2 },
+    };
 	
 	if(CmdFlag == CTRL_INIT){
 		// 初期化モード (ここは制御開始時/再開時に1度だけ呼び出される(非リアルタイム空間なので重い処理もOK))
@@ -64,7 +63,7 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
 		Interface.ServoON();		// サーボON指令の送出
 		Initializing = false;		// 初期化中ランプ消灯		
     
-		switch (Bus.Init("enp0s20f0u4"))
+		switch (Bus.Init("eno1"))
 		{
 		case EthercatBus::InitState::ALL_SLAVES_OP_STATE:
 			// std::cout << "[o] All slaves are in OP state." << std::endl;
@@ -81,20 +80,6 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
 		}
 	}
 	if(CmdFlag == CTRL_LOOP){
-		
-        Bus.Update();
-
-		const std::optional<int> Volume = VolumeSlave.GetData();
-
-        if (Volume)
-        {
-            ServoSlave.SetData(*Volume / 1024. * 180);
-            // std::cout << "[o] Volume data: " << *Volume << std::endl;
-        }
-        else
-        {
-            std::cout << "[x] Failed to get Volume data." << std::endl;
-        }
 
 		// 周期モード (ここは制御周期 SAMPLING_TIME[0] 毎に呼び出される(リアルタイム空間なので処理は制御周期内に収めること))
 		// リアルタイム制御ここから
@@ -103,21 +88,27 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
 		
 
 		// ここに制御アルゴリズムを記述する
+        Bus.Update();
+
+		const std::optional<int> Volume = VolumeSlave.GetData();
 		
 		Interface.SetCurrent(iqref);	// [A] 電流指令ベクトルの出力
 		Screen.SetVarIndicator(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);	// 任意変数インジケータ(変数0, ..., 変数9)
 		Graph.SetTime(Tact, t);									// [s] グラフ描画用の周期と時刻のセット
 
-		if (Volume)
-		{
+        if (Volume)
+        {
+            MotorSlave.SetData(*Volume);
+            // std::cout << "[o] Volume data: " << *Volume << std::endl;
 			Graph.SetVars(0, *Volume / 1024. - 0.5, 0, 0, 0, 0, 0, 0, 0);	// グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
-		}
-		else
-		{
+        }
+        else
+        {
+            std::cout << "[x] Failed to get Volume data." << std::endl;
 			Graph.SetVars(0, 0, 0, 0, 0, 0, 0, 0, 0);	// グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
-		}
+        }
 		
-		Graph.SetVars(1, 0, 0, 0, 0, 0, 0, 0, 0);	// グラフプロット1 (グラフ番号, 変数0, ..., 変数7)
+		Graph.SetVars(1, Tcmp * 1000, 0, 0, 0, 0, 0, 0, 0);	// グラフプロット1 (グラフ番号, 変数0, ..., 変数7)
 		Graph.SetVars(2, 0, 0, 0, 0, 0, 0, 0, 0);	// グラフプロット2 (グラフ番号, 変数0, ..., 変数7)
 		UsrGraph.SetVars(0, 0);						// ユーザカスタムプロット（例）
 		Memory.SetData(Tact, t, 0, 0, 0, 0, 0, 0, 0, 0, 0);		// CSVデータ保存変数 (周期, A列, B列, ..., J列)
