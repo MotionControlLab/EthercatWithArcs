@@ -63,7 +63,7 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
 		Interface.ServoON();		// サーボON指令の送出
 		Initializing = false;		// 初期化中ランプ消灯		
     
-		switch (Bus.Init("eth0"))
+		switch (Bus.Init("eno1"))
 		{
 		case EthercatBus::InitState::ALL_SLAVES_OP_STATE:
 			// std::cout << "[o] All slaves are in OP state." << std::endl;
