@@ -18,9 +18,6 @@ add_compile_options(
 # libを取得 (static リンク)
 add_subdirectory(${arcs_root_dir}/lib lib)
 
-# SOEMを取得
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib/SOEM)
-
 # sysのファイルを.cmakeから取得
 include(${arcs_root_dir}/sys/ARCS_SYS.cmake)
 
@@ -41,7 +38,6 @@ add_executable(
         ${ARCS_EQUIP_files}
         ConstParams.hh
         ControlFunctions.cc
-        EthercatBus.cc
 )
 
 # ARCSに必要ライブラリをリンク
@@ -53,7 +49,6 @@ target_link_libraries(
         tinfo
         png
         z
-        soem
         ${CMAKE_THREAD_LIBS_INIT}
         ARCS_LIB
 )
@@ -67,7 +62,6 @@ add_executable(
         OfflineFunction.cc # ARCS.ccの代わりにオフライン
         ConstParams.hh
         ControlFunctions.cc
-        EthercatBus.cc
 )
 
 # ARCSに必要ライブラリをリンク
@@ -79,7 +73,6 @@ target_link_libraries(
         tinfo
         png
         z
-        soem
         ${CMAKE_THREAD_LIBS_INIT}
         ARCS_LIB
 )
