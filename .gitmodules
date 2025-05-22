@@ -1,0 +1,3 @@
+[submodule "master/ARCS6/lib/SOEM"]
+	path = master/ARCS6/lib/SOEM
+	url = https://github.com/OpenEtherCATsociety/SOEM.git
