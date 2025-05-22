@@ -9,11 +9,20 @@ file(GLOB_RECURSE ARCS_LIB CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/*.hh"
 )
 
+# SOEMを取得
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/SOEM)
+
 add_library(ARCS_LIB STATIC ${ARCS_LIB})
 target_include_directories(ARCS_LIB
         PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
         PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../sys # sysに依存
 )
+
+# ライブラリとsoemをリンク
+target_link_libraries(ARCS_LIB
+                      soem
+)
+
 # C++17機能を要求
 target_compile_features(ARCS_LIB PUBLIC cxx_std_17)
 # コンパイラオプションを設定
