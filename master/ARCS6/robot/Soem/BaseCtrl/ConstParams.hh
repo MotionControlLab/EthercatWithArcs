@@ -36,7 +36,7 @@ class ConstParams {
 		//! @brief 制御周期の設定
 		static constexpr std::array<unsigned long, ARCSparams::THREAD_MAX> SAMPLING_TIME = {
 		//   s  m  u  n	制御周期は Ts[0] ≦ Ts[1] ≦ … ≦ Ts[THREAD_MAX] になるようにすること
-				1000000,	// [ns] 制御用周期実行関数1 (スレッド1) 制御周期
+				100000,	// [ns] 制御用周期実行関数1 (スレッド1) 制御周期
 				1000000,	// [ns] 制御用周期実行関数2 (スレッド2) 制御周期
 				2000000,	// [ns] 制御用周期実行関数3 (スレッド3) 制御周期
 		};
@@ -83,7 +83,7 @@ class ConstParams {
 		
 		//! @brief 縦軸ラベル
 		static constexpr std::array<char[31], ARCSparams::PLOT_MAX> PLOT_FLABEL = {
-			"---------- [-]",	// グラフプロット0
+			"Delay----- [ms]",	// グラフプロット0
 			"Tcmp------ [ms]",	// グラフプロット1
 			"---------- [-]",	// グラフプロット2
 			"---------- [-]",	// グラフプロット3
@@ -203,7 +203,7 @@ class ConstParams {
 		
 		//! @brief 時系列プロットの縦軸最大値
 		static constexpr std::array<double, ARCSparams::PLOT_MAX> PLOT_FMAX	= {
-			1.0,	// プロット0
+			4.0,	// プロット0
 			1.0,	// プロット1
 			1.0,	// プロット2
 			1.0,	// プロット3
@@ -223,7 +223,7 @@ class ConstParams {
 		
 		//! @brief 時系列プロットの縦軸最小値
 		static constexpr std::array<double, ARCSparams::PLOT_MAX> PLOT_FMIN = {
-			-1.0,	// プロット0
+			0.0,	// プロット0
 			-1.0,	// プロット1
 			-1.0,	// プロット2
 			-1.0,	// プロット3

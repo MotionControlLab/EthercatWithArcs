@@ -50,12 +50,12 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
     // 制御用変数宣言
     static EthercatBus Bus;
 
-    static EthercatSlaveReceiver<int> VolumeSlave{
+    static EthercatSlaveReceiver<double> VolumeSlave{
         SlaveIndex{ 1 },
     };
 
-    static EthercatSlaveSender<int> MotorSlave{
-        SlaveIndex{ 2 },
+    static EthercatSlaveSender<double> MotorSlave{
+        SlaveIndex{ 1 },
     };
 
     if (CmdFlag == CTRL_INIT)
@@ -66,7 +66,7 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
         Interface.ServoON();          // サーボON指令の送出
         Initializing = false;         // 初期化中ランプ消灯
 
-        switch (Bus.Init("eno1"))
+        switch (Bus.Init("enp1s0"))
         {
         case EthercatBus::InitState::ALL_SLAVES_OP_STATE:
             // std::cout << "[o] All slaves are in OP state." << std::endl;
@@ -90,21 +90,22 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
         Interface.GetPosition(thm);    // [rad] 位置ベクトルの取得
         Screen.GetOnlineSetVar();      // オンライン設定変数の読み込み
 
-
         // ここに制御アルゴリズムを記述する
-        Bus.Update();
 
-        const std::optional<int> Volume = VolumeSlave.GetData();
+        MotorSlave.SetData(t);
+
+        Bus.Update();
 
         Interface.SetCurrent(iqref);                             // [A] 電流指令ベクトルの出力
         Screen.SetVarIndicator(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);    // 任意変数インジケータ(変数0, ..., 変数9)
         Graph.SetTime(Tact, t);                                  // [s] グラフ描画用の周期と時刻のセット
 
-        if (Volume)
+        if (const std::optional<double> Volume = VolumeSlave.GetData())
         {
-            MotorSlave.SetData(*Volume);
+            // MotorSlave.SetData(*Volume);
             // std::cout << "[o] Volume data: " << *Volume << std::endl;
-            Graph.SetVars(0, *Volume / 1024. - 0.5, 0, 0, 0, 0, 0, 0, 0);    // グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
+            // Graph.SetVars(0, *Volume / 1024. - 0.5, 0, 0, 0, 0, 0, 0, 0);    // グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
+            Graph.SetVars(0, (t - *Volume) * 1000, Tcmp * 1000, 0, 0, 0, 0, 0, 0);    // グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
         }
         else
         {
@@ -112,7 +113,7 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
             Graph.SetVars(0, 0, 0, 0, 0, 0, 0, 0, 0);    // グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
         }
 
-        Graph.SetVars(1, Tcmp * 1000, 0, 0, 0, 0, 0, 0, 0);    // グラフプロット1 (グラフ番号, 変数0, ..., 変数7)
+        // Graph.SetVars(1, Tcmp * 1000, 0, 0, 0, 0, 0, 0, 0);    // グラフプロット1 (グラフ番号, 変数0, ..., 変数7)
         Graph.SetVars(2, 0, 0, 0, 0, 0, 0, 0, 0);              // グラフプロット2 (グラフ番号, 変数0, ..., 変数7)
         UsrGraph.SetVars(0, 0);                                // ユーザカスタムプロット（例）
         Memory.SetData(Tact, t, 0, 0, 0, 0, 0, 0, 0, 0, 0);    // CSVデータ保存変数 (周期, A列, B列, ..., J列)
