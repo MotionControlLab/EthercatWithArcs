@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # イーサポート列挙
 
 # https://qiita.com/p_cub/items/43c5c44886443087de09

@@ -1,20 +1,14 @@
+#!/bin/bash
+
+# エラーでスクリプトを終了
+set -e
+
 cd ./ARCS6/robot/Soem/BaseCtrl
 
-if [ ! -d build ]; then
-    mkdir build
-fi
-cd build
-
+# ビルド
+mkdir -p build && cd build
 cmake ..
-if [ $? -ne 0 ]; then
-    echo "CMake configuration failed"
-    exit 1
-fi
-
 make
-if [ $? -ne 0 ]; then
-    echo "Make failed"
-    exit 1
-fi
 
+# 実行
 sudo ./ARCS
