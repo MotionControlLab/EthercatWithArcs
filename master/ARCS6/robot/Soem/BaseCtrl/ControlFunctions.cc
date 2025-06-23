@@ -50,11 +50,16 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
     // 制御用変数宣言
     static EthercatBus Bus;
 
-    static EthercatSlaveReceiver<double> VolumeSlave{
+    struct Data
+    {
+        uint8_t data[32];
+    };
+
+    static EthercatReceiver<Data> VolumeSlave{
         SlaveIndex{ 1 },
     };
 
-    static EthercatSlaveSender<double> MotorSlave{
+    static EthercatSender<Data> MotorSlave{
         SlaveIndex{ 1 },
     };
 
@@ -92,7 +97,7 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
 
         // ここに制御アルゴリズムを記述する
 
-        MotorSlave.SetData(t);
+        MotorSlave.SetData({});
 
         Bus.Update();
 
@@ -100,12 +105,12 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
         Screen.SetVarIndicator(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);    // 任意変数インジケータ(変数0, ..., 変数9)
         Graph.SetTime(Tact, t);                                  // [s] グラフ描画用の周期と時刻のセット
 
-        if (const std::optional<double> Volume = VolumeSlave.GetData())
+        if (const std::optional<Data> Volume = VolumeSlave.GetData())
         {
             // MotorSlave.SetData(*Volume);
             // std::cout << "[o] Volume data: " << *Volume << std::endl;
             // Graph.SetVars(0, *Volume / 1024. - 0.5, 0, 0, 0, 0, 0, 0, 0);    // グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
-            Graph.SetVars(0, (t - *Volume) * 1000, Tcmp * 1000, 0, 0, 0, 0, 0, 0);    // グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
+            Graph.SetVars(0, (t - Volume->data[0]) * 1000, Tcmp * 1000, 0, 0, 0, 0, 0, 0);    // グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
         }
         else
         {

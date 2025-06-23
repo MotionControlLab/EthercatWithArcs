@@ -20,14 +20,14 @@ using SlaveIndex = int;
  * @tparam T 受信するデータの型
  */
 template <typename T>
-class EthercatSlaveReceiver
+class EthercatReceiver
 {
     ec_slavet& Slave;
 
     SlaveIndex Index;
 
 public:
-    EthercatSlaveReceiver(SlaveIndex Index)
+    EthercatReceiver(SlaveIndex Index)
         : Slave(ec_slave[Index])
         , Index(Index)
     {
@@ -59,14 +59,14 @@ public:
  * @tparam T 送信するデータの型
  */
 template <typename T>
-class EthercatSlaveSender
+class EthercatSender
 {
     ec_slavet& Slave;
 
     SlaveIndex Index;
 
 public:
-    EthercatSlaveSender(SlaveIndex Index)
+    EthercatSender(SlaveIndex Index)
         : Slave(ec_slave[Index])
         , Index(Index)
     {
