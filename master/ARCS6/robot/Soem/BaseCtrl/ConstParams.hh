@@ -73,7 +73,7 @@ class ConstParams {
 		
 		// 時系列グラフプロットの共通設定
 		static constexpr char PLOT_PNGFILENAME[] = "Screenshot.png";//!< スクリーンショットのPNGファイル名
-		static constexpr size_t PLOT_NUM =  3;						//!< [-] グラフプロットの数
+		static constexpr size_t PLOT_NUM =  4;						//!< [-] グラフプロットの数
 		static constexpr double PLOT_TIMESPAN = 10;					//!< [s] プロットの時間幅
 		static constexpr double PLOT_TIMERESO = 0.01;				//!< [s] プロットの時間分解能
 		static constexpr size_t PLOT_RINGBUFF = 1024;				//!< [-] プロット用リングバッファの要素数
@@ -203,10 +203,10 @@ class ConstParams {
 		
 		//! @brief 時系列プロットの縦軸最大値
 		static constexpr std::array<double, ARCSparams::PLOT_MAX> PLOT_FMAX	= {
-			4.0,	// プロット0
-			1.0,	// プロット1
-			1.0,	// プロット2
-			1.0,	// プロット3
+			3000.0,	// プロット0
+			1000.0,	// プロット1
+			1000.0,	// プロット2
+			4.0,	// プロット3
 			1.0,	// プロット4
 			1.0,	// プロット5
 			1.0,	// プロット6
@@ -224,9 +224,9 @@ class ConstParams {
 		//! @brief 時系列プロットの縦軸最小値
 		static constexpr std::array<double, ARCSparams::PLOT_MAX> PLOT_FMIN = {
 			0.0,	// プロット0
-			-1.0,	// プロット1
-			-1.0,	// プロット2
-			-1.0,	// プロット3
+			-1000.0,	// プロット1
+			-1000.0,	// プロット2
+			0.0,	// プロット3
 			-1.0,	// プロット4
 			-1.0,	// プロット5
 			-1.0,	// プロット6

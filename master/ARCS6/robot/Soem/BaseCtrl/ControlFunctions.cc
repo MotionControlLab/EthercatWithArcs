@@ -23,6 +23,7 @@
 // SOEMラッパー
 #include "EthercatBus.hh"
 #include "EthercatSlave.hh"
+#include "Motor.hh"
 
 // 追加のARCSライブラリをここに記述
 #include "ArcsMatrix.hh"
@@ -50,19 +51,11 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
     // 制御用変数宣言
     static EthercatBus Bus;
 
-    struct Data
-    {
-        uint8_t data[32];
-    };
-
-    static EthercatReceiver<Data> VolumeSlave{
+    static Motor AcMotor {
         SlaveIndex{ 1 },
+        PIController{ 3.3, 4.0, Ts }    // PI制御器のパラメータ (Kp, Ki, 初期値)
     };
-
-    static EthercatSender<Data> MotorSlave{
-        SlaveIndex{ 1 },
-    };
-
+    
     if (CmdFlag == CTRL_INIT)
     {
         // 初期化モード (ここは制御開始時/再開時に1度だけ呼び出される(非リアルタイム空間なので重い処理もOK))
@@ -93,33 +86,44 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
         // 周期モード (ここは制御周期 SAMPLING_TIME[0] 毎に呼び出される(リアルタイム空間なので処理は制御周期内に収めること))
         // リアルタイム制御ここから
         Interface.GetPosition(thm);    // [rad] 位置ベクトルの取得
-        Screen.GetOnlineSetVar();      // オンライン設定変数の読み込み
-
-        // ここに制御アルゴリズムを記述する
-
-        MotorSlave.SetData({});
-
-        Bus.Update();
 
         Interface.SetCurrent(iqref);                             // [A] 電流指令ベクトルの出力
         Screen.SetVarIndicator(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);    // 任意変数インジケータ(変数0, ..., 変数9)
         Graph.SetTime(Tact, t);                                  // [s] グラフ描画用の周期と時刻のセット
+        
 
-        if (const std::optional<Data> Volume = VolumeSlave.GetData())
+
+        Bus.Update();
+
+        AcMotor.ServoOn();
+        AcMotor.SetTargetVelocity(600);  // [rpm]
+
+        // オンライン変数が書き換えられたらモーターのエラーをリセット
+        double InputError;
+        Screen.GetOnlineSetVar(InputError);      // オンライン設定変数の読み込み
+        if (InputError > 10.0)
         {
-            // MotorSlave.SetData(*Volume);
-            // std::cout << "[o] Volume data: " << *Volume << std::endl;
-            // Graph.SetVars(0, *Volume / 1024. - 0.5, 0, 0, 0, 0, 0, 0, 0);    // グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
-            Graph.SetVars(0, (t - Volume->data[0]) * 1000, Tcmp * 1000, 0, 0, 0, 0, 0, 0);    // グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
-        }
-        else
-        {
-            std::cout << "[x] Failed to get Volume data." << std::endl;
-            Graph.SetVars(0, 0, 0, 0, 0, 0, 0, 0, 0);    // グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
+            AcMotor.ResetError();            // エラーリセット
+            Screen.SetOnlineSetVar(0, 0);    // オンライン設定変数のリセット
         }
 
-        // Graph.SetVars(1, Tcmp * 1000, 0, 0, 0, 0, 0, 0, 0);    // グラフプロット1 (グラフ番号, 変数0, ..., 変数7)
-        Graph.SetVars(2, 0, 0, 0, 0, 0, 0, 0, 0);              // グラフプロット2 (グラフ番号, 変数0, ..., 変数7)
+        AcMotor.Move();
+
+        Graph.SetVars(1, AcMotor.GetVelocity());
+        Graph.SetVars(2, AcMotor.GetState());
+
+        // if (const auto Data = Receiver.GetData())
+        // {
+        //     Graph.SetVars(0, Data->Position);
+        //     Graph.SetVars(1, Data->Velocity);
+        //     Graph.SetVars(2, Data->Current);
+        //     Graph.SetVars(3, static_cast<int32_t>(Data->State));
+        // }
+        // else
+        // {
+        //     Graph.SetVars(0, 0, 0, 0, 0, 0, 0, 0, 0);    // グラフプロット0 (グラフ番号, 変数0, ..., 変数7)
+        // }　
+
         UsrGraph.SetVars(0, 0);                                // ユーザカスタムプロット（例）
         Memory.SetData(Tact, t, 0, 0, 0, 0, 0, 0, 0, 0, 0);    // CSVデータ保存変数 (周期, A列, B列, ..., J列)
                                                                // リアルタイム制御ここまで
