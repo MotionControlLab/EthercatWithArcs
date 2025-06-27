@@ -1,5 +1,7 @@
 #pragma once
 
+#include "ARCSprint.hh"
+
 class PIController
 {
     double Kp;
@@ -35,6 +37,7 @@ class Motor
     {
         float CurrentRef;
         bool ServoOn : 1;
+        bool ServoOff : 1;
         bool ResetError : 1;
     } __attribute__((packed));
 
@@ -42,7 +45,7 @@ class Motor
     {
         int32_t Position;
         int32_t Velocity;
-        int32_t Current;
+        float Current;
 
         enum class StateKind
         {
@@ -71,7 +74,7 @@ public:
 
     void SetTargetVelocity(float TargetVelocity) noexcept
     {
-        mtos.CurrentRef = fbctrl.Update(Receiver.GetData()->Velocity, TargetVelocity);
+        mtos.CurrentRef = 0.30f;// = fbctrl.Update(Receiver.GetData()->Velocity, TargetVelocity);
     }
 
     void ResetError() noexcept
@@ -84,24 +87,65 @@ public:
         mtos.ServoOn = true;
     }
 
+    void ServoOff() noexcept
+    {
+        mtos.ServoOff = true;
+    }
+
     void Move() noexcept
     {
         Sender.SetData(mtos);
 
         // エラー復帰していたら解除
-        // if (mtos.ResetError)
-        // {
-        //     if (Receiver.GetData()->State != SlaveToMaster::StateKind::Error)
-        //     {
-        //         mtos.ResetError = false; // Reset only if the state is Error
-        //         std::cout << "Error reset successfully." << std::endl;
-        //     }
-        // }
+        if (mtos.ResetError)
+        {
+            if (Receiver.GetData()->State != SlaveToMaster::StateKind::Error)
+            {
+                mtos.ResetError = false; // Reset only if the state is Error
+                std::cout << "Error reset successfully." << std::endl;
+            }
+        }
+
+        // サーボONしていたら解除
+        if (mtos.ServoOn)
+        {
+            if (Receiver.GetData()->State != SlaveToMaster::StateKind::Run)
+            {
+                mtos.ServoOn = false; // Reset only if the state is not Run
+                std::cout << "Servo ON successfully." << std::endl;
+            }
+        }
+
+        // サーボOFFしていたら解除
+        if (mtos.ServoOff)
+        {
+            if (Receiver.GetData()->State != SlaveToMaster::StateKind::Stop)
+            {
+                mtos.ServoOff = false; // Reset only if the state is not Stop
+                std::cout << "Servo OFF successfully." << std::endl;
+            }
+        }
+    }
+
+    void Dump() const
+    {
+        // DebugPrintVarFmt("Motor State", "Position: %d, Velocity: %d, Current: %d, State: %d",
+        //     Receiver.GetData()->Position,
+        //     Receiver.GetData()->Velocity,
+        //     Receiver.GetData()->Current,
+        //     static_cast<int>(Receiver.GetData()->State));
+        using namespace ARCS;
+        DebugPrint("hogehoge");
     }
 
     int32_t GetVelocity() const noexcept
     {
         return Receiver.GetData()->Velocity;
+    }
+
+    int32_t GetPosition() const noexcept
+    {
+        return Receiver.GetData()->Position;
     }
 
     int GetState() const noexcept
