@@ -28,6 +28,12 @@ public:
         LastError = Error;
         return Output;
     }
+
+    void Reset() noexcept
+    {
+        Integral = 0.0;
+        LastError = 0.0;
+    }
 };
 
 
@@ -74,11 +80,12 @@ public:
 
     void SetTargetVelocity(float TargetVelocity) noexcept
     {
-        mtos.CurrentRef = 0.30f;// = fbctrl.Update(Receiver.GetData()->Velocity, TargetVelocity);
+        mtos.CurrentRef = fbctrl.Update(Receiver.GetData()->Velocity, TargetVelocity);
     }
 
     void ResetError() noexcept
     {
+        fbctrl.Reset();
         mtos.ResetError = true;
     }
 
@@ -92,38 +99,29 @@ public:
         mtos.ServoOff = true;
     }
 
-    void Move() noexcept
+    void Update() noexcept
     {
         Sender.SetData(mtos);
 
         // エラー復帰していたら解除
-        if (mtos.ResetError)
+        if (mtos.ResetError && Receiver.GetData()->State != SlaveToMaster::StateKind::Error)
         {
-            if (Receiver.GetData()->State != SlaveToMaster::StateKind::Error)
-            {
-                mtos.ResetError = false; // Reset only if the state is Error
-                std::cout << "Error reset successfully." << std::endl;
-            }
+            mtos.ResetError = false; // Reset only if the state is Error
+            std::cout << "Error reset successfully." << std::endl;
         }
 
         // サーボONしていたら解除
-        if (mtos.ServoOn)
+        if (mtos.ServoOn && Receiver.GetData()->State == SlaveToMaster::StateKind::Run)
         {
-            if (Receiver.GetData()->State != SlaveToMaster::StateKind::Run)
-            {
-                mtos.ServoOn = false; // Reset only if the state is not Run
-                std::cout << "Servo ON successfully." << std::endl;
-            }
+            mtos.ServoOn = false; // Reset only if the state is not Run
+            std::cout << "Servo ON successfully." << std::endl;
         }
 
         // サーボOFFしていたら解除
-        if (mtos.ServoOff)
+        if (mtos.ServoOff && Receiver.GetData()->State == SlaveToMaster::StateKind::Stop)
         {
-            if (Receiver.GetData()->State != SlaveToMaster::StateKind::Stop)
-            {
-                mtos.ServoOff = false; // Reset only if the state is not Stop
-                std::cout << "Servo OFF successfully." << std::endl;
-            }
+            mtos.ServoOff = false; // Reset only if the state is not Stop
+            std::cout << "Servo OFF successfully." << std::endl;
         }
     }
 

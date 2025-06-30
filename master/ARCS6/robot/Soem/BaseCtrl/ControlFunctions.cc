@@ -53,7 +53,7 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
 
     static Motor AcMotor{
         SlaveIndex{ 1 },
-        PIController{ 3.3, 4.0, Ts }    // PI制御器のパラメータ (Kp, Ki, 初期値)
+        PIController{ 0.01, 0.0001, Ts }    // PI制御器のパラメータ (Kp, Ki, 初期値)
     };
 
     if (CmdFlag == CTRL_INIT)
@@ -94,7 +94,9 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
 
         Bus.Update();
 
-        AcMotor.SetTargetVelocity(50);    // [rpm]
+        double TargetVelocity = 100;
+        // Screen.GetOnlineSetVar(TargetVelocity);
+        AcMotor.SetTargetVelocity(TargetVelocity);    // [rpm]
 
         // オンライン設定用変数の書き換えを入力として使う"(-""-)"
         const auto Input = [&](int varIndex) -> bool
@@ -114,22 +116,11 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
             return true;
         };
 
-        if (Input(0))    // オンライン設定変数0の値が変更された場合
-        {
-            AcMotor.ResetError();    // エラーリセット
-        }
+        if (Input(1))  AcMotor.ResetError();    // エラーリセット
+        if (Input(2))  AcMotor.ServoOn();    // サーボON
+        if (Input(3))  AcMotor.ServoOff();    // サーボOFF
 
-        if (Input(1))    // オンライン設定変数1の値が変更された場合
-        {
-            AcMotor.ServoOn();    // サーボON
-        }
-
-        if (Input(2))    // オンライン設定変数2の値が変更された場合
-        {
-            AcMotor.ServoOff();    // サーボOFF
-        }
-
-        AcMotor.Move();
+        AcMotor.Update();
 
         Graph.SetVars(0, AcMotor.GetPosition());
         Graph.SetVars(1, AcMotor.GetVelocity());
