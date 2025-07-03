@@ -53,8 +53,10 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
 
     static Motor AcMotor{
         SlaveIndex{ 1 },
-        PIController{ 0.01, 0.0001, Ts }    // PI制御器のパラメータ (Kp, Ki, 初期値)
+        PIController{ 0.0201, 1.2600, Ts }
     };
+
+    static EthercatReceiver<int> Volume{ SlaveIndex{ 2 } };
 
     if (CmdFlag == CTRL_INIT)
     {
@@ -88,15 +90,17 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
         Interface.GetPosition(thm);    // [rad] 位置ベクトルの取得
 
         Interface.SetCurrent(iqref);                             // [A] 電流指令ベクトルの出力
-        Screen.SetVarIndicator(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);    // 任意変数インジケータ(変数0, ..., 変数9)
         Graph.SetTime(Tact, t);                                  // [s] グラフ描画用の周期と時刻のセット
 
 
         Bus.Update();
 
-        double TargetVelocity = 100;
-        // Screen.GetOnlineSetVar(TargetVelocity);
-        AcMotor.SetTargetVelocity(TargetVelocity);    // [rpm]
+
+        if (const auto TargetVelocity = Volume.GetData())
+        {
+            AcMotor.SetTargetVelocity(*TargetVelocity);
+            Screen.SetVarIndicator(*TargetVelocity, 0, 0, 0, 0, 0, 0, 0, 0, 0);    // 任意変数インジケータ(変数0, ..., 変数9)
+        }
 
         // オンライン設定用変数の書き換えを入力として使う"(-""-)"
         const auto Input = [&](int varIndex) -> bool
