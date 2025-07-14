@@ -1,15 +1,14 @@
 #pragma once
 
-#include "ARCSprint.hh"
-
 class PIController
 {
     double Kp;
     double Ki;
     const double Ts;
-    
+
     double Integral;
     double LastError;
+
 public:
     PIController(double Kp, double Ki, double Ts) noexcept
         : Kp(Kp)
@@ -17,7 +16,8 @@ public:
         , Ts(Ts)
         , Integral()
         , LastError()
-    {}
+    {
+    }
 
     double Update(double Current, double Target) noexcept
     {
@@ -37,118 +37,186 @@ public:
 };
 
 
-class Motor
+class AcMotor
 {
-    struct MasterToSlave
-    {
-        float CurrentRef;
-        bool ServoOn : 1;
-        bool ServoOff : 1;
-        bool ResetError : 1;
-    } __attribute__((packed));
-
-    struct SlaveToMaster
-    {
-        int32_t Position;
-        int32_t Velocity;
-        float Current;
-
-        enum class StateKind
-        {
-            None,
-            Run,
-            Stop,
-            Error,
-        } State : 2;
-    } __attribute__((packed));
-
-    PIController fbctrl;
-
-    EthercatSender<MasterToSlave> Sender;
-
-    EthercatReceiver<SlaveToMaster> Receiver;
-
-    MasterToSlave mtos{};
-
 public:
-    Motor(SlaveIndex Index, PIController&& fbctrl) noexcept
-        : fbctrl(std::move(fbctrl))
-        , Sender(Index)
+    enum class StateKind : uint8_t
+    {
+        None,
+        Run,
+        Stop,
+        Error,
+    };
+
+    AcMotor(SlaveIndex Index) noexcept
+        : Sender(Index)
         , Receiver(Index)
     {
     }
 
-    void SetTargetVelocity(float TargetVelocity) noexcept
+    /// @brief 電流指令を設定
+    /// @param IqCurrentRef [A] 電流指令値
+    void SetCurrentRef(float IqCurrentRef) noexcept
     {
-        mtos.CurrentRef = fbctrl.Update(Receiver.GetData()->Velocity, TargetVelocity);
+        MasterToSlaveData.IqCurrentRef = IqCurrentRef;
     }
 
-    void ResetError() noexcept
+
+    /// @brief サーボON指令を非同期で送信
+    /// @return true: サーボON状態に移行完了, false: サーボON状態に移行中
+    bool ServoOnAsync() noexcept
     {
-        fbctrl.Reset();
-        mtos.ResetError = true;
+        if (SlaveToMasterData.State == StateKind::Run)
+            return true;
+        MasterToSlaveData.Control = MasterToSlaveSchema::ControlKind::ServoOn;
+        return false;    // Run状態に移行中
     }
 
-    void ServoOn() noexcept
+    /// @brief サーボOFF指令を非同期で送信
+    /// @return true: サーボOFF状態に移行完了, false: サーボOFF状態に移行中
+    bool ServoOffAsync() noexcept
     {
-        mtos.ServoOn = true;
+        if (SlaveToMasterData.State == StateKind::Stop)
+            return true;
+        MasterToSlaveData.Control = MasterToSlaveSchema::ControlKind::ServoOff;
+        return false;    // Stop状態に移行中
     }
 
-    void ServoOff() noexcept
+    /// @brief エラー解除指令を非同期で送信
+    /// @return true: エラー解除完了, false: エラー解除中
+    bool ResetErrorAsync() noexcept
     {
-        mtos.ServoOff = true;
+        if (SlaveToMasterData.State != StateKind::Error)
+            return true;
+        MasterToSlaveData.Control = MasterToSlaveSchema::ControlKind::ResetError;
+        return false;    // Error解除中
     }
 
-    void Update() noexcept
+    /// @brief 更新
+    /// @return true: データ更新成功, false: 失敗
+    bool Update() noexcept
     {
-        Sender.SetData(mtos);
-
-        // エラー復帰していたら解除
-        if (mtos.ResetError && Receiver.GetData()->State != SlaveToMaster::StateKind::Error)
+        if (const auto Data = Receiver.GetData())
         {
-            mtos.ResetError = false; // Reset only if the state is Error
-            std::cout << "Error reset successfully." << std::endl;
+            // データ受信成功
+            SlaveToMasterData = *Data;
+        }
+        else
+        {
+            // データ受信失敗
+            // std::cerr << "[x] Failed to receive data from slave." << std::endl;
+            return false;
         }
 
-        // サーボONしていたら解除
-        if (mtos.ServoOn && Receiver.GetData()->State == SlaveToMaster::StateKind::Run)
+        // 指令状態がモーターに反映されているかを確認し、反映されていたら指令を消去する
+        // ドライバ上の状態遷移ボタンと共存させるためにこうしている (常に指令が送られるとOR条件をとれなくなるため)
+        if (MasterToSlaveData.Control == MasterToSlaveSchema::ControlKind::ResetError &&
+            SlaveToMasterData.State != StateKind::Error)
         {
-            mtos.ServoOn = false; // Reset only if the state is not Run
-            std::cout << "Servo ON successfully." << std::endl;
+            MasterToSlaveData.Control = MasterToSlaveSchema::ControlKind::None;
         }
 
-        // サーボOFFしていたら解除
-        if (mtos.ServoOff && Receiver.GetData()->State == SlaveToMaster::StateKind::Stop)
+        if (MasterToSlaveData.Control == MasterToSlaveSchema::ControlKind::ServoOn &&
+            SlaveToMasterData.State == StateKind::Run)
         {
-            mtos.ServoOff = false; // Reset only if the state is not Stop
-            std::cout << "Servo OFF successfully." << std::endl;
+            MasterToSlaveData.Control = MasterToSlaveSchema::ControlKind::None;
         }
+
+        if (MasterToSlaveData.Control == MasterToSlaveSchema::ControlKind::ServoOff &&
+            SlaveToMasterData.State == StateKind::Stop)
+        {
+            MasterToSlaveData.Control = MasterToSlaveSchema::ControlKind::None;
+        }
+
+        Sender.SetData(MasterToSlaveData);
+
+        return true;
     }
 
-    void Dump() const
+    float GetTheta() const noexcept
     {
-        // DebugPrintVarFmt("Motor State", "Position: %d, Velocity: %d, Current: %d, State: %d",
-        //     Receiver.GetData()->Position,
-        //     Receiver.GetData()->Velocity,
-        //     Receiver.GetData()->Current,
-        //     static_cast<int>(Receiver.GetData()->State));
-        using namespace ARCS;
-        DebugPrint("hogehoge");
+        return static_cast<float>(SlaveToMasterData.ThetaECount) * ECOUNT_TO_RADI;
     }
 
-    int32_t GetVelocity() const noexcept
+    float GetOmega() const noexcept
     {
-        return Receiver.GetData()->Velocity;
+        return static_cast<float>(SlaveToMasterData.OmegaECount) * ECOUNT_TO_RADI;
     }
 
-    int32_t GetPosition() const noexcept
+    float GetIqCurrent() const noexcept
     {
-        return Receiver.GetData()->Position;
+        return SlaveToMasterData.IqCurrent;
     }
 
-    int GetState() const noexcept
+    StateKind GetState() const noexcept
     {
-        return static_cast<int>(Receiver.GetData()->State);
+        return SlaveToMasterData.State;
     }
-};
+
+private:
+    struct MasterToSlaveSchema
+    {
+        float IqCurrentRef;
+
+        enum class ControlKind : uint8_t
+        {
+            None,
+            ServoOn,
+            ServoOff,
+            ResetError,
+        } Control : 2;
+    } __attribute__((packed));
+
+    struct SlaveToMasterSchema
+    {
+        int32_t ThetaECount;
+        int32_t OmegaECount;
+        float IqCurrent;
+
+        StateKind State : 2;
+    } __attribute__((packed));
+
+    EthercatSender<MasterToSlaveSchema> Sender;
+    MasterToSlaveSchema MasterToSlaveData{};
+
+    EthercatReceiver<SlaveToMasterSchema> Receiver;
+    SlaveToMasterSchema SlaveToMasterData{};
+
+
+    /********************************************************************/
+    /* 各種定数定義                                                      */
+    /********************************************************************/
+    static constexpr float PARAM_MTR_R = 0.36f;            // [Ohm] モータ巻線抵抗
+    static constexpr float PARAM_MTR_L = 0.2e-3f;          // [H] モータインダクタンス
+    static constexpr float PARAM_MTR_PHI_A = 7.833e-3f;    // [V/(rad/s)] 鎖交磁束 (二相換算)
+
+    static constexpr float PARAM_MTR_J = 1e-5f;    // [kgm^2] モータイナーシャ
+
+    static constexpr uint16_t ENC_PULSE = 1000;      // [pulse/rev] 1逓倍あたりのエンコーダパルス数
+    static constexpr uint16_t ENC_MUL = 4;           // [-] N逓倍
+    static constexpr uint16_t MTR_POLE_NUM = 8;      // [-] モータ極数 (NOT 極対数)
+    static constexpr uint16_t ENC_Z_OFFSET = 320;    // [count] エンコーダZ相とU相誘起電圧ゼロクロスのオフセット(実測値)
+
+    // static constexpr float    INV_VDC         = 24.0f;      // [V] 直流リンク電圧 (実測Vdcを使用するverでは不要)
+
+    static constexpr uint32_t CARRIER_FREQ = 20000;    // [Hz] キャリア周波数
+    static constexpr uint16_t DEAD_TIME = 250;         // [ns] デッドタイム
+    static constexpr uint16_t PERIOD_ASR = 500;        // [us] ASR演算周期
+    static constexpr uint16_t PERIOD_SEQ = 10000;      // [us] シーケンス演算周期
+
+    static constexpr float PARAM_MTR_MAXSPD = 2.0f * M_PI * 120.0f;       // [rad/s] 最大回転速度
+    static constexpr float ALMLEVEL_OVERSPD = PARAM_MTR_MAXSPD * 1.2f;    // [rad/s] オーバースピードの閾値 最大回転速度の1.2倍
+
+    static constexpr uint16_t MTR_POLE_PAIR = MTR_POLE_NUM / 2;    // [-] モータ極対数
+    static constexpr float PARAM_MTR_KE = PARAM_MTR_PHI_A;         // [V/(rad/s)] 誘起電圧定数 (二相換算)
+
+    /********************************************************************/
+    /* 各種定数定義                                                      */
+    /********************************************************************/
+    static constexpr uint16_t ENC_COEFF = ENC_PULSE * ENC_MUL;               // [count/rev] エンコーダ係数
+    static constexpr uint16_t ENC_COEFF_ELEC = ENC_COEFF / MTR_POLE_PAIR;    // [count/rev] 電気角あたりのエンコーダ係数
+
+    static constexpr float ENC_TO_OMEGAE = 2.0f * M_PI * 1000000.0f / ((float)PERIOD_ASR * ENC_COEFF_ELEC);    // 2π[rad/rev]*p[-]*1000000/(Tasr[us]*ENC[count/rev])
     
+    static constexpr float ECOUNT_TO_RADI = (2.0f * M_PI) / (ENC_COEFF * MTR_POLE_PAIR);
+};

@@ -36,7 +36,7 @@ class ConstParams {
 		//! @brief 制御周期の設定
 		static constexpr std::array<unsigned long, ARCSparams::THREAD_MAX> SAMPLING_TIME = {
 		//   s  m  u  n	制御周期は Ts[0] ≦ Ts[1] ≦ … ≦ Ts[THREAD_MAX] になるようにすること
-				100000,	// [ns] 制御用周期実行関数1 (スレッド1) 制御周期
+				500000,	// [ns] 制御用周期実行関数1 (スレッド1) 制御周期
 				1000000,	// [ns] 制御用周期実行関数2 (スレッド2) 制御周期
 				2000000,	// [ns] 制御用周期実行関数3 (スレッド3) 制御周期
 		};
@@ -205,7 +205,7 @@ class ConstParams {
 		static constexpr std::array<double, ARCSparams::PLOT_MAX> PLOT_FMAX	= {
 			10000000.0,	// プロット0
 			300.0,	// プロット1
-			4.0,	// プロット2
+			100.0,	// プロット2
 			4.0,	// プロット3
 			1.0,	// プロット4
 			1.0,	// プロット5

@@ -51,11 +51,12 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
     // 制御用変数宣言
     static EthercatBus Bus;
 
-    static Motor AcMotor{
+    static AcMotor AcMotor{
         SlaveIndex{ 1 },
-        PIController{ 0.0201, 1.2600, Ts }
     };
 
+    // PIController{ 0.0201, 1.2600, Ts }
+    
     static EthercatReceiver<int> Volume{ SlaveIndex{ 2 } };
 
     if (CmdFlag == CTRL_INIT)
@@ -89,19 +90,24 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
         // リアルタイム制御ここから
         Interface.GetPosition(thm);    // [rad] 位置ベクトルの取得
 
-        Interface.SetCurrent(iqref);                             // [A] 電流指令ベクトルの出力
-        Graph.SetTime(Tact, t);                                  // [s] グラフ描画用の周期と時刻のセット
+        Interface.SetCurrent(iqref);    // [A] 電流指令ベクトルの出力
+        Graph.SetTime(Tact, t);         // [s] グラフ描画用の周期と時刻のセット
 
 
         Bus.Update();
 
 
-        if (const auto TargetVelocity = Volume.GetData())
-        {
-            AcMotor.SetTargetVelocity(*TargetVelocity);
-            Screen.SetVarIndicator(*TargetVelocity, 0, 0, 0, 0, 0, 0, 0, 0, 0);    // 任意変数インジケータ(変数0, ..., 変数9)
-        }
-
+        // if (const auto TargetVelocity = Volume.GetData())
+        // {
+        //     AcMotor.SetTargetVelocity(*TargetVelocity);
+        //     Screen.SetVarIndicator(*TargetVelocity, 0, 0, 0, 0, 0, 0, 0, 0, 0);    // 任意変数インジケータ(変数0, ..., 変数9)
+        // }
+        // else
+        // {
+        //     std::cout << "[x] Failed to get target velocity from Volume." << std::endl;
+        // }
+        AcMotor.SetCurrentRef(0.5);
+        
         // オンライン設定用変数の書き換えを入力として使う"(-""-)"
         const auto Input = [&](int varIndex) -> bool
         {
@@ -120,17 +126,26 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
             return true;
         };
 
-        if (Input(1))  AcMotor.ResetError();    // エラーリセット
-        if (Input(2))  AcMotor.ServoOn();    // サーボON
-        if (Input(3))  AcMotor.ServoOff();    // サーボOFF
+        if (Input(1))
+            AcMotor.ResetErrorAsync();
+        if (Input(2))
+            AcMotor.ServoOnAsync();
+        if (Input(3))
+            AcMotor.ServoOffAsync();
 
         AcMotor.Update();
 
-        Graph.SetVars(0, AcMotor.GetPosition());
-        Graph.SetVars(1, AcMotor.GetVelocity());
-        Graph.SetVars(2, AcMotor.GetState());
+        Screen.SetVarIndicator(AcMotor.GetTheta(), // [rev] モーターの回転角 (2πで割って回転数に変換)
+                               AcMotor.GetOmega(),    // [rad/s] モーターの角速度
+                               AcMotor.GetIqCurrent(),      // [A] モーターの電流
+                               static_cast<uint8_t>(AcMotor.GetState()));    // モーターの状態
 
-        UsrGraph.SetVars(0, 0);                                // ユーザカスタムプロット（例）
+        Graph.SetVars(0, AcMotor.GetTheta());
+        Graph.SetVars(1, AcMotor.GetOmega());
+        Graph.SetVars(2, AcMotor.GetIqCurrent());
+        Graph.SetVars(3, (uint8_t)AcMotor.GetState());
+
+        UsrGraph.SetVars(0, 10);                                // ユーザカスタムプロット（例）
         Memory.SetData(Tact, t, 0, 0, 0, 0, 0, 0, 0, 0, 0);    // CSVデータ保存変数 (周期, A列, B列, ..., J列)
                                                                // リアルタイム制御ここまで
     }
