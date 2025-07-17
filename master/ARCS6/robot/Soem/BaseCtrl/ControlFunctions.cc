@@ -23,7 +23,7 @@
 // SOEMラッパー
 #include "EthercatBus.hh"
 #include "EthercatSlave.hh"
-#include "Motor.hh"
+#include "AcMotor.hh"
 
 // 追加のARCSライブラリをここに記述
 #include "ArcsMatrix.hh"
