@@ -5,10 +5,16 @@ set -e
 
 cd ./ARCS6/robot/Soem/BaseCtrl
 
-# ビルド
+# cmake
 mkdir -p build && cd build
-cmake ..
-make
+cmake -DCMAKE_BUILD_TYPE=Release ..
 
-# 実行
-sudo ./ARCS
+# ビルドと実行
+# 引数が "offline" の場合はオフラインモードでビルド
+if [ $1 == "offline" ]; then
+    make -j ARCS_offline
+    sudo ./ARCS_offline
+else 
+    make -j ARCS
+    sudo ./ARCS
+fi
