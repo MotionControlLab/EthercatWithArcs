@@ -15,6 +15,44 @@ sudo ./run.sh
 
 ## EtherCAT 経由でのACモーター制御
 
+## 構造体
+
+マスター → スレーブ
+
+```cpp
+struct MasterToSlaveSchema
+{
+    float IqCurrentRef;  // Iq軸電流指令値 [A]
+
+    enum class ControlKind : uint8_t
+    {
+        None,
+        ServoOn,
+        ServoOff,
+        ResetError,
+    } Control : 2;  // 状態遷移指令
+} __attribute__((packed));
+```
+
+マスター ← スレーブ
+
+```cpp
+struct SlaveToMasterSchema
+{
+    int32_t ThetaECount;  // 角位置 [ECount]   → 機械角にできそう
+    int32_t OmegaECount;  // 角速度 [ECount/s] → 機械角にできそう
+    float   IqCurrent;    // Iq軸電流 [A]
+
+    enum class StateKind : uint8_t
+    {
+        None,
+        Run,
+        Stop,
+        Error,
+    } State : 2;  // モータードライバの状態
+} __attribute__((packed));
+```
+
 ### 疑似コード / 電流制御 / 1つのモーター
 
 ```cpp
