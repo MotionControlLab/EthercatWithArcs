@@ -131,7 +131,7 @@ int main()
         auto TargetSpeed = 2 * PI;  // 目標速度 [rad/s]
         auto CurrentSpeed = AcMotor.GetOmega();  // 現在速度 [rad/s]
         auto CurrentRef = SpeedController.Update(CurrentSpeed, TargetSpeed);  // 電流指令値を計算
-        AcMotor.SetSpeedRef(CurrentRef);
+        AcMotor.SetCurrentRef(CurrentRef);
         AcMotor.Update();
         
         Bus.Update();
@@ -164,7 +164,7 @@ int main()
         else if (Input == "reset")
             AcMotor.ErrorResetAsync();
 
-        AcMotor.SetSpeedRef(0.01);
+        AcMotor.SetCurrentRef(0.01);
         AcMotor.Update();
         
         Bus.Update();

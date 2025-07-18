@@ -60,10 +60,9 @@ void ControlFunction()
         if (const auto TargetSpeedRaw = Volume.GetData())
         {
             const float TargetSpeed = *TargetSpeedRaw / 1024. * 2.0f * M_PI; // [rad/s] 速度指令値の変換
-            const float CurrentSpeed = AcMotor.GetOmega() / 4;
+            const float CurrentSpeed = AcMotor.GetOmega();
             const float CurrentRef = SpeedController.Update(CurrentSpeed, TargetSpeed);
             AcMotor.SetCurrentRef(CurrentRef);
-            std::cout << CurrentSpeed << std::endl;
         }
         else
         {
