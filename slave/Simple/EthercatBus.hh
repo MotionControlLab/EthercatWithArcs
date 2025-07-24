@@ -1,6 +1,6 @@
 #pragma once
 
-#include "EasyCAT.h"
+#include <EasyCAT.h>
 
 class EthercatBus
 {

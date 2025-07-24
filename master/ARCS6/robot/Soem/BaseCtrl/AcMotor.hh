@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <cmath>
 
+#include "EthercatSender.hh"
+#include "EthercatReceiver.hh"
+
 /********************************************************************/
 /* 各種定数定義                                                      */
 /********************************************************************/
@@ -65,7 +68,10 @@ public:
         Error,
     };
 
-    AcMotor(SlaveIndex Index) noexcept
+    /// @brief コンストラクタ
+    /// @param Index スレーブのインデックス 接続順にマスターから近い順に1, 2, 3, ... と割り当てられる
+    /// @param encoderResolution エンコーダの解像度 [pulse/rev] TODO:
+    explicit AcMotor(SlaveIndex Index) noexcept
         : Sender(Index)
         , Receiver(Index)
     {
@@ -199,7 +205,7 @@ private:
 
     struct SlaveToMasterSchema
     {
-        int32_t ThetaECount;
+        int32_t ThetaECount;  // TODO: 機械角にする
         int32_t OmegaECount;
         float IqCurrent;
 
