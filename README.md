@@ -9,8 +9,16 @@ cd ./EthercatWithArcs/master
 
 ## build & run
 
+ARCS オンライン
+
 ```sh
 sudo ./run.sh
+```
+
+ARCS オフライン
+
+```sh
+sudo ./run.sh offline
 ```
 
 ## docs
