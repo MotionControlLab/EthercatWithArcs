@@ -3,8 +3,6 @@
 #include <cstdint>
 #include <cmath>
 
-#include "EthercatSender.hh"
-#include "EthercatReceiver.hh"
 
 /********************************************************************/
 /* 各種定数定義                                                      */
