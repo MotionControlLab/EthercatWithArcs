@@ -37,6 +37,9 @@ EthercatBus::InitState EthercatBus::Init(const char* InterfaceName)
 
     // 全てのスレーブが SAFE_OP 状態に達するのを待つ
     ec_statecheck(0, EC_STATE_SAFE_OP, EC_TIMEOUTSTATE * 4);
+        
+    ec_dcsync0(1, TRUE, 50000, 0);
+    ec_dcsync0(2, TRUE, 50000, 0);
 
     // 何じゃこりゃ
     // int oloop, iloop, chk;
@@ -69,23 +72,25 @@ EthercatBus::InitState EthercatBus::Init(const char* InterfaceName)
     ec_receive_processdata(EC_TIMEOUTRET);
     ec_writestate(0);
 
-    // 全てのスレーブがOP状態に達するのを待つ
-    int CheckN= 40;
-    do
+    // 全てのスレーブがOP状態に達するのを待つ    
+    int TryN = 40;
+    for (int i = 0; i < TryN; ++i)
     {
         ec_send_processdata();
         ec_receive_processdata(EC_TIMEOUTRET);
         ec_statecheck(0, EC_STATE_OPERATIONAL, 50000);
-    } while (CheckN-- && (Master.state != EC_STATE_OPERATIONAL));
 
-    if (Master.state == EC_STATE_OPERATIONAL)
-    {
-        return InitState::ALL_SLAVES_OP_STATE;
+        if (Master.state == EC_STATE_OPERATIONAL)
+        {
+
+
+    ec_dcsync0(1, TRUE, 50000, 0);
+    ec_dcsync0(2, TRUE, 50000, 0);
+            return InitState::ALL_SLAVES_OP_STATE;
+        }
     }
-    else
-    {
-        return InitState::NOT_ALL_OP_STATE;
-    }
+
+    return InitState::NOT_ALL_OP_STATE;
 }
 
 void EthercatBus::Close()
