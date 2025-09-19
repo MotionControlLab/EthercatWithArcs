@@ -23,6 +23,7 @@
 // SOEMラッパー
 #include "EthercatBus.hh"
 #include "EthercatSlave.hh"
+#include "PIController.hh"
 #include "AcMotor.hh"
 
 // 追加のARCSライブラリをここに記述
@@ -55,6 +56,8 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
         SlaveIndex{ 1 },
     };
 
+    static PIController SpeedController{ ASR_GAIN_KPS, ASR_GAIN_KIS, 0.000'500 };
+
     // PIController{ 0.0201, 1.2600, Ts }
     
     static EthercatReceiver<int> Volume{ SlaveIndex{ 2 } };
@@ -82,6 +85,9 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
             std::cout << "[x] Not all slaves are in OP state." << std::endl;
             return 3;
         }
+
+        
+        AcMotor.ServoOnAsync();
     }
     if (CmdFlag == CTRL_LOOP)
     {
@@ -94,9 +100,6 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
         Graph.SetTime(Tact, t);         // [s] グラフ描画用の周期と時刻のセット
 
 
-        Bus.Update();
-
-
         // if (const auto TargetVelocity = Volume.GetData())
         // {
         //     AcMotor.SetTargetVelocity(*TargetVelocity);
@@ -106,7 +109,15 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
         // {
         //     std::cout << "[x] Failed to get target velocity from Volume." << std::endl;
         // }
-        AcMotor.SetCurrentRef(0.5);
+
+        const auto TargetVelocity = Volume.GetData();
+
+        const float TargetSpeed = (t > 2) ? (M_PI) : 0.0; // [rad/s] 速度指令値の変換
+        const float CurrentSpeed = AcMotor.GetOmega();
+        const float CurrentRef = SpeedController.Update(CurrentSpeed, TargetSpeed);
+        AcMotor.SetCurrentRef(CurrentRef);
+
+
         
         // オンライン設定用変数の書き換えを入力として使う"(-""-)"
         const auto Input = [&](int varIndex) -> bool
@@ -134,19 +145,22 @@ bool ControlFunctions::ControlFunction1(const double t, const double Tact, const
             AcMotor.ServoOffAsync();
 
         AcMotor.Update();
+        Bus.Update();
 
-        Screen.SetVarIndicator(AcMotor.GetTheta(), // [rev] モーターの回転角 (2πで割って回転数に変換)
-                               AcMotor.GetOmega(),    // [rad/s] モーターの角速度
-                               AcMotor.GetIqCurrent(),      // [A] モーターの電流
-                               static_cast<uint8_t>(AcMotor.GetState()));    // モーターの状態
+        // Screen.SetVarIndicator(TargetSpeed, CurrentRef);
+                            //     AcMotor.GetTheta(), // [rev] モーターの回転角 (2πで割って回転数に変換)
+                            //    AcMotor.GetOmega(),    // [rad/s] モーターの角速度
+                            //    AcMotor.GetIqCurrent(),      // [A] モーターの電流
+                            //    static_cast<uint8_t>(AcMotor.GetState()));    // モーターの状態
 
-        Graph.SetVars(0, AcMotor.GetTheta());
-        Graph.SetVars(1, AcMotor.GetOmega());
-        Graph.SetVars(2, AcMotor.GetIqCurrent());
-        Graph.SetVars(3, (uint8_t)AcMotor.GetState());
+        Graph.SetVars(0, TargetSpeed);
+        Graph.SetVars(1, CurrentRef);
+        // Graph.SetVars(1, AcMotor.GetOmega());
+        // Graph.SetVars(2, AcMotor.GetIqCurrent());
+        // Graph.SetVars(3, (uint8_t)AcMotor.GetState());
 
         UsrGraph.SetVars(0, 10);                                // ユーザカスタムプロット（例）
-        Memory.SetData(Tact, t, 0, 0, 0, 0, 0, 0, 0, 0, 0);    // CSVデータ保存変数 (周期, A列, B列, ..., J列)
+        Memory.SetData(Tact, t, CurrentRef);    // CSVデータ保存変数 (周期, A列, B列, ..., J列)
                                                                // リアルタイム制御ここまで
     }
     if (CmdFlag == CTRL_EXIT)

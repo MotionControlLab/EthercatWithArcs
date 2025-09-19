@@ -203,8 +203,8 @@ class ConstParams {
 		
 		//! @brief 時系列プロットの縦軸最大値
 		static constexpr std::array<double, ARCSparams::PLOT_MAX> PLOT_FMAX	= {
-			10000000.0,	// プロット0
-			300.0,	// プロット1
+			4.0,	// プロット0
+			1.0,	// プロット1
 			100.0,	// プロット2
 			4.0,	// プロット3
 			1.0,	// プロット4
@@ -224,7 +224,7 @@ class ConstParams {
 		//! @brief 時系列プロットの縦軸最小値
 		static constexpr std::array<double, ARCSparams::PLOT_MAX> PLOT_FMIN = {
 			0000.0,	// プロット0
-			0.0,	// プロット1
+			-1.0,	// プロット1
 			0.0,	// プロット2
 			0.0,	// プロット3
 			-1.0,	// プロット4

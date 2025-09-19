@@ -38,8 +38,8 @@ EthercatBus::InitState EthercatBus::Init(const char* InterfaceName)
     // 全てのスレーブが SAFE_OP 状態に達するのを待つ
     ec_statecheck(0, EC_STATE_SAFE_OP, EC_TIMEOUTSTATE * 4);
         
-    ec_dcsync0(1, TRUE, 50000, 0);
-    ec_dcsync0(2, TRUE, 50000, 0);
+    ec_dcsync0(1, TRUE, 50'000, 0);
+    ec_dcsync0(2, TRUE, 50'000, 0);
 
     // 何じゃこりゃ
     // int oloop, iloop, chk;
